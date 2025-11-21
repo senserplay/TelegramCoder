@@ -23,5 +23,8 @@ class Settings:
         # Telegram Settings
         self.BOT_TOKEN = os.getenv("BOT_TOKEN")
 
+        # AI Settings
+        self.PROXY_API_KEY = os.getenv("PROXY_API_KEY")
+
 
 env_settings = Settings()

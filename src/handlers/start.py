@@ -9,6 +9,7 @@ from dishka import FromDishka
 router = Router()
 
 
+# start (только админ): очистка истории конкретного чата и немедленная отправка первого опроса.
 @router.message(Command("start"))
 async def cmd_start(message: Message, logger: FromDishka[Logger]):
     logger.info(f"Пользователь {message.from_user.id} запустил бота")

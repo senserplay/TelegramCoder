@@ -1,6 +1,6 @@
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.application.errors.http_errors.chat import ChatAlreadyExistException, ChatNotFoundException
+from src.application.errors.http_errors.chat import ChatNotFoundException
 from src.application.schemas.chat import ChatCreateDTO, ChatResponseDTO
 from src.infrastructure.postgres.models.chat import Chat
 
@@ -18,15 +18,15 @@ class ChatDBGateWay:
             raise ChatNotFoundException()
         return ChatResponseDTO.model_validate(chat.as_dict())
 
-    async def create_chat(self, chat_data: ChatCreateDTO) -> ChatResponseDTO:
-        if self.is_exist(chat_data.telegram_chat_id):
-            raise ChatAlreadyExistException()
+    async def get_or_create_chat(self, chat_data: ChatCreateDTO) -> ChatResponseDTO:
+        if await self.is_exist(chat_data.telegram_chat_id):
+            return await self.get_chat(chat_data.telegram_chat_id)
         new_chat = Chat(**chat_data.model_dump())
         self.session.add(new_chat)
         await self.session.commit()
         await self.session.refresh(new_chat)
 
-        return await ChatResponseDTO.model_validate(new_chat.as_dict())
+        return ChatResponseDTO.model_validate(new_chat.as_dict())
 
     async def is_exist(self, telegram_chat_id: int) -> bool:
         result = await self.session.execute(
@@ -34,3 +34,8 @@ class ChatDBGateWay:
         )
         chat: Chat = result.scalars().first()
         return bool(chat)
+
+    async def delete_chat(self, telegram_chat_id: int):
+        stmt = delete(Chat).where(Chat.telegram_chat_id == telegram_chat_id)
+        await self.session.execute(stmt)
+        await self.session.commit()
