@@ -13,6 +13,7 @@ from src.core.modules.config import ConfigProvider
 from src.core.modules.db import DBProvider
 from src.core.modules.llm import LLMProvider
 from src.core.modules.logger import LoggerProvider
+from src.core.modules.poll import PollProvider
 from src.handlers.setup import setup_dp
 from src.infrastructure.postgres.connection import DATABASE_URL
 
@@ -27,6 +28,7 @@ async def main():
         ChatProvider(),
         ConfigProvider(),
         LLMProvider(),
+        PollProvider(),
         AiogramProvider(),
     )
 

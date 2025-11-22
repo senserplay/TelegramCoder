@@ -1,39 +1,42 @@
 from datetime import datetime, timedelta, timezone
 from logging import Logger
-from typing import Dict, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import redis
 from redis.exceptions import RedisError
 
 
 class PollStorage:
-    def __init__(self, redis_client: redis.Redis, logger: Logger):
+    def __init__(self, redis_client: redis.Redis, logger: Logger, ttl: int):
         self.redis_client = redis_client
         self.logger = logger
+        self.ttl = ttl
 
-    def set_active_poll(self, chat_id: int, poll_id: int) -> bool:
+    def set_active_poll(self, chat_id: int, poll_id: str) -> bool:
         try:
             key = f"active_poll:{chat_id}"
-            result = self.redis_client.set(key, str(poll_id))
+            result = self.redis_client.set(key, poll_id, self.ttl)
             self.logger.debug(f"Установлен активный опрос {poll_id} для чата {chat_id}")
             return bool(result)
         except RedisError as e:
             self.logger.error(f"Ошибка установки активного опроса для чата {chat_id}: {str(e)}")
             raise
 
-    def get_active_poll(self, chat_id: int) -> Optional[int]:
+    def get_active_poll(self, chat_id: int) -> Optional[str]:
         try:
             key = f"active_poll:{chat_id}"
             poll_id_bytes = self.redis_client.get(key)
             if poll_id_bytes:
-                return int(poll_id_bytes.decode("utf-8"))
+                return poll_id_bytes.decode("utf-8")
             return None
         except RedisError as e:
             self.logger.error(f"Ошибка получения активного опроса для чата {chat_id}: {str(e)}")
             raise
 
-    def clear_active_poll(self, chat_id: int) -> bool:
+    def clear_chat_data(self, chat_id: int) -> bool:
         try:
+            active_poll_id = self.get_active_poll(chat_id)
+            self.clear_poll_live_votes(active_poll_id)
             key = f"active_poll:{chat_id}"
             result = self.redis_client.delete(key)
             self.logger.debug(f"Очищен активный опрос для чата {chat_id}")
@@ -42,28 +45,26 @@ class PollStorage:
             self.logger.error(f"Ошибка очистки активного опроса для чата {chat_id}: {str(e)}")
             raise
 
-    def initialize_poll_votes(self, poll_id: int, option_count: int) -> bool:
+    def initialize_poll_votes(self, poll_id: str, options: List[int]) -> bool:
         try:
             key = f"poll_live_votes:{poll_id}"
             pipe = self.redis_client.pipeline()
 
-            for option_index in range(option_count):
-                # Используем строковые ключи и значения для хеша
-                pipe.hset(key, str(option_index), "0")
+            for option in options:
+                pipe.hset(key, str(option), "0")
 
-            pipe.expire(key, 86400)  # 24 часа
+            pipe.expire(key, self.ttl)
 
             results = pipe.execute()
             self.logger.debug(
-                f"Инициализированы голоса для опроса {poll_id} с {option_count} вариантами"
+                f"Инициализированы голоса для опроса {poll_id} с {options} вариантами"
             )
-            # Проверяем все hset операции (кроме последней - expire)
             return all(result == 1 for result in results[:-1])
         except RedisError as e:
             self.logger.error(f"Ошибка инициализации голосов для опроса {poll_id}: {str(e)}")
             raise
 
-    def add_vote(self, poll_id: int, option_index: int) -> Tuple[bool, int]:
+    def add_vote(self, poll_id: str, option_index: int) -> Tuple[bool, int]:
         try:
             key = f"poll_live_votes:{poll_id}"
             new_count = self.redis_client.hincrby(key, str(option_index), 1)
@@ -77,7 +78,7 @@ class PollStorage:
             )
             raise
 
-    def get_poll_votes(self, poll_id: int) -> Dict[int, int]:
+    def get_poll_votes(self, poll_id: str) -> Dict[int, int]:
         try:
             key = f"poll_live_votes:{poll_id}"
             votes_data = self.redis_client.hgetall(key)
@@ -94,7 +95,7 @@ class PollStorage:
             self.logger.error(f"Ошибка получения голосов для опроса {poll_id}: {str(e)}")
             raise
 
-    def get_total_votes(self, poll_id: int) -> int:
+    def get_total_votes(self, poll_id: str) -> int:
         try:
             votes = self.get_poll_votes(poll_id)
             return sum(votes.values())
@@ -104,9 +105,18 @@ class PollStorage:
             )
             raise
 
+    def clear_poll_live_votes(self, poll_id: str) -> bool:
+        try:
+            key = f"poll_live_votes:{poll_id}"
+            result = self.redis_client.delete(key)
+            self.logger.debug(f"Очищен активный опрос для опроса {poll_id}")
+            return bool(result)
+        except RedisError as e:
+            self.logger.error(f"Ошибка очистки опроса {poll_id}: {str(e)}")
+            raise
+
     def set_next_poll_time(self, chat_id: int, delay_minutes: int = 60) -> datetime:
         try:
-            # Используем timezone-aware datetime
             current_time = datetime.now(timezone.utc)
             next_time = current_time + timedelta(minutes=delay_minutes)
             timestamp = next_time.timestamp()
@@ -156,24 +166,7 @@ class PollStorage:
             self.logger.error(f"Ошибка проверки времени опроса для чата {chat_id}: {str(e)}")
             raise
 
-    def cleanup_poll_data(self, chat_id: int, poll_id: int) -> bool:
-        try:
-            pipe = self.redis_client.pipeline()
-
-            pipe.delete(f"active_poll:{chat_id}")
-            pipe.delete(f"poll_live_votes:{poll_id}")
-            pipe.delete(f"next_poll_at:{chat_id}")
-
-            results = pipe.execute()
-            self.logger.info(f"Очищены данные опроса {poll_id} для чата {chat_id}")
-            return all(results)
-        except RedisError as e:
-            self.logger.error(
-                f"Ошибка очистки данных опроса {poll_id} для чата {chat_id}: {str(e)}"
-            )
-            raise
-
-    def get_poll_results(self, poll_id: int) -> Dict[str, Union[int, Dict[int, int]]]:
+    def get_poll_results(self, poll_id: str) -> Dict[str, Union[int, Dict[int, int]]]:
         try:
             votes = self.get_poll_votes(poll_id)
             total_votes = sum(votes.values())

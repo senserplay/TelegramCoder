@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from src.infrastructure.postgres.repositories.chat import ChatDBGateWay
 from src.infrastructure.postgres.repositories.poll import PollDBGateWay
+from src.infrastructure.postgres.repositories.poll_option import PollOptionDBGateWay
 
 
 class DBProvider(Provider):
@@ -55,3 +56,7 @@ class DBProvider(Provider):
     @provide(scope=Scope.REQUEST)
     async def poll_gateway(self, db_session: AsyncSession) -> PollDBGateWay:
         return PollDBGateWay(db_session)
+
+    @provide(scope=Scope.REQUEST)
+    async def poll_option_gateway(self, db_session: AsyncSession) -> PollOptionDBGateWay:
+        return PollOptionDBGateWay(db_session)

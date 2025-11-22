@@ -2,7 +2,7 @@ from aiogram import Dispatcher
 from src.handlers.admin import router as admin_router
 from src.handlers.code import router as code_router
 from src.handlers.group import router as group_router
-from src.handlers.polls import router as polls_router
+from src.handlers.poll import router as polls_router
 from src.handlers.start import router as start_router
 
 

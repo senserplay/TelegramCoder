@@ -1,6 +1,6 @@
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.application.errors.http_errors.chat import ChatNotFoundException
+from src.application.errors.chat import ChatNotFoundException
 from src.application.schemas.chat import ChatCreateDTO, ChatResponseDTO
 from src.infrastructure.postgres.models.chat import Chat
 

@@ -8,7 +8,7 @@ from src.application.enums import PollStatus
 class PollResponseDTO(BaseModel):
     id: int
     chat_id: int
-    telegram_poll_id: int
+    telegram_poll_id: str
     question: str
     status: PollStatus
     created_at: datetime
@@ -17,6 +17,6 @@ class PollResponseDTO(BaseModel):
 
 class PollCreateDTO(BaseModel):
     chat_id: int
-    telegram_poll_id: int
+    telegram_poll_id: str
     question: str
-    status: Optional[PollStatus] = PollStatus.active.value
+    status: Optional[PollStatus] = PollStatus.active

@@ -29,5 +29,8 @@ class Settings:
         self.LLM_REQUEST_TIMEOUT = int(os.getenv("LLM_REQUEST_TIMEOUT"))
         self.LLM_MODEL = os.getenv("LLM_MODEL")
 
+        # Poll Settings
+        self.POLL_TTL = os.getenv("POLL_TTL")
+
 
 env_settings = Settings()
