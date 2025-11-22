@@ -24,7 +24,10 @@ class Settings:
         self.BOT_TOKEN = os.getenv("BOT_TOKEN")
 
         # AI Settings
-        self.PROXY_API_KEY = os.getenv("PROXY_API_KEY")
+        self.LLM_PROXY_API_KEY = os.getenv("LLM_PROXY_API_KEY")
+        self.LLM_PROXY_BASE_URL = os.getenv("LLM_PROXY_BASE_URL")
+        self.LLM_REQUEST_TIMEOUT = int(os.getenv("LLM_REQUEST_TIMEOUT"))
+        self.LLM_MODEL = os.getenv("LLM_MODEL")
 
 
 env_settings = Settings()

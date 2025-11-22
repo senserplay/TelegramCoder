@@ -9,7 +9,9 @@ from dishka.integrations.aiogram import (
 from src.core.config import env_settings
 from src.core.modules.cache import CacheProvider
 from src.core.modules.chat import ChatProvider
+from src.core.modules.config import ConfigProvider
 from src.core.modules.db import DBProvider
+from src.core.modules.llm import LLMProvider
 from src.core.modules.logger import LoggerProvider
 from src.handlers.setup import setup_dp
 from src.infrastructure.postgres.connection import DATABASE_URL
@@ -23,6 +25,8 @@ async def main():
         CacheProvider(),
         LoggerProvider(),
         ChatProvider(),
+        ConfigProvider(),
+        LLMProvider(),
         AiogramProvider(),
     )
 
