@@ -1,15 +1,16 @@
 from logging import Logger
 
 from aiogram import Router
-from aiogram.types import PollAnswer
+from aiogram.filters import Command
+from aiogram.types import Message, PollAnswer
 from dishka import FromDishka
 from src.infrastructure.redis.storages.poll import PollStorage
+from src.services.poll import PollService
 
 
 router = Router()
 
 
-# sendnow (админ): отправить следующий опрос немедленно
 @router.poll_answer()
 async def handle_poll_answer(
     poll_answer: PollAnswer, logger: FromDishka[Logger], poll_storage: FromDishka[PollStorage]
@@ -19,3 +20,15 @@ async def handle_poll_answer(
     logger.info(
         f"Пользователь {poll_answer.user.id} проголосовал за вариант {poll_answer.option_ids} в опросе {poll_answer.poll_id}"
     )
+
+
+@router.message(Command("sendnow"))
+async def cmd_start(
+    message: Message,
+    logger: FromDishka[Logger],
+    poll_service: FromDishka[PollService],
+):
+    logger.info(
+        f"Пользователь {message.from_user.id} запросил отправку отпроса в чате {message.chat.id}"
+    )
+    await poll_service.process_chat_poll(message.chat.id, message.bot)

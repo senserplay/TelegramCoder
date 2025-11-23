@@ -68,6 +68,10 @@ class PollStorage:
 
         return datetime.fromtimestamp(float(timestamp_str), tz=timezone.utc)
 
+    async def clear_next_poll_time(self, chat_id: int):
+        key = f"next_poll_at:{chat_id}"
+        await self.redis_client.delete(key)
+
     async def get_expired_chats(self, current_timestamp: float) -> Set[int]:
         expired_chats = set()
         cursor = "0"

@@ -1,14 +1,16 @@
 from logging import Logger
-from typing import List
+from typing import Dict, List
 
 from aiogram import Bot
 from aiogram.types import Message, PollOption
+from src.application.schemas.code_line import CodeLineCreateDTO
 from src.application.schemas.poll import PollCreateDTO, PollResponseDTO
 from src.application.schemas.poll_option import PollOptionCreateDTO
 from src.external.llm import prompt
 from src.external.llm.proxy_api import ProxyAPI
 from src.infrastructure.postgres.repositories.poll import PollDBGateWay
 from src.infrastructure.redis.storages.poll import PollStorage
+from src.services.code_line import CodeLineService
 from src.services.poll_option import PollOptionService
 
 
@@ -18,12 +20,14 @@ class PollService:
         poll_gateway: PollDBGateWay,
         poll_storage: PollStorage,
         poll_option_service: PollOptionService,
+        code_line_service: CodeLineService,
         llm: ProxyAPI,
         logger: Logger,
     ):
         self.poll_gateway = poll_gateway
         self.poll_storage = poll_storage
         self.poll_option_service = poll_option_service
+        self.code_line_service = code_line_service
         self.llm = llm
         self.logger = logger
 
@@ -91,7 +95,68 @@ class PollService:
             self.logger.error(f"Ошибка создания опроса для чата {chat_id}: {e}")
             raise
 
+    async def process_chat_poll(self, chat_id: int, bot: Bot):
+        poll_id = await self.poll_storage.get_active_poll(chat_id)
+
+        if not poll_id:
+            self.logger.warning(
+                f"⚠️ Нет активного опроса для чата {chat_id}, выполняем очистку данных"
+            )
+            await self.poll_storage.clear_chat_data(chat_id)
+            return
+
+        self.logger.info(f"📋 Найден активный опрос {poll_id} для чата {chat_id}")
+
+        votes = await self.poll_storage.get_poll_votes(poll_id)
+
+        if not votes:
+            self.logger.warning(f"ℹ️ Нет голосов для опроса {poll_id} в чате {chat_id}")
+
+        winning_option = await self._get_vote_winner(votes)
+
+        last_code_lines = await self.code_line_service.get_chat_code(chat_id)
+        poll_option = await self.poll_option_service.get_poll_option(poll_id, winning_option)
+
+        code_line_data = CodeLineCreateDTO(
+            chat_id=chat_id,
+            poll_id=poll_id,
+            line_number=len(last_code_lines) + 1,
+            content=poll_option.option_text,
+        )
+        await self.code_line_service.add_line(code_line_data)
+        await self._cleanup_chat_data(chat_id, poll_id)
+
+        new_poll_id = await self.create_poll_for_chat(
+            chat_id=chat_id, bot=bot, last_code_lines=last_code_lines
+        )
+
+        self.logger.info(f"🆕 Создан новый опрос {new_poll_id} для чата {chat_id}")
+
     async def clear_chat(self, message: Message):
         await self.poll_option_service.delete_chat_poll_options(message.chat.id)
         await self.poll_gateway.delete_chat_polls(message.chat.id)
         await self.poll_storage.clear_chat_data(message.chat.id)
+
+    async def _get_vote_winner(self, votes: Dict[int, int]) -> int:
+        if not votes:
+            return 0
+
+        winning_option = max(votes.items(), key=lambda x: x[1])[0]
+        return winning_option
+
+    async def _cleanup_chat_data(self, chat_id: int, poll_id: str):
+        self.logger.debug(f"🧹 Начало очистки данных для чата {chat_id}, опрос {poll_id}")
+        try:
+            await self.poll_storage.clear_poll_votes(poll_id)
+            self.logger.debug(f"✅ Голоса для опроса {poll_id} очищены")
+
+            await self.poll_storage.clear_chat_data(chat_id)
+            self.logger.debug(f"✅ Данные активного опроса для чата {chat_id} очищены")
+
+            await self.poll_storage.clear_next_poll_time(chat_id)
+            self.logger.debug(f"✅ Ключ времени следующего опроса для чата {chat_id} удален")
+
+            self.logger.debug(f"✅ Все данные для чата {chat_id} успешно очищены")
+
+        except Exception as e:
+            self.logger.error(f"❌ Ошибка очистки данных для чата {chat_id}: {str(e)}")
