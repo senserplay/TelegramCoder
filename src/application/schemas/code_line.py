@@ -10,3 +10,10 @@ class CodeLineResponseDTO(BaseModel):
     line_number: int
     content: str
     created_at: datetime
+
+
+class CodeLineCreateDTO(BaseModel):
+    chat_id: int
+    poll_id: str
+    line_number: int
+    content: str

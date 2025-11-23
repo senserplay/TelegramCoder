@@ -1,6 +1,7 @@
 from logging import Logger
 
 from dishka import Provider, Scope, provide
+from src.external.llm.proxy_api import ProxyAPI
 from src.infrastructure.postgres.repositories.poll import PollDBGateWay
 from src.infrastructure.postgres.repositories.poll_option import PollOptionDBGateWay
 from src.infrastructure.redis.storages.poll import PollStorage
@@ -15,9 +16,10 @@ class PollProvider(Provider):
         poll_gateway: PollDBGateWay,
         poll_storage: PollStorage,
         poll_option_service: PollOptionService,
+        llm: ProxyAPI,
         logger: Logger,
     ) -> PollService:
-        return PollService(poll_gateway, poll_storage, poll_option_service, logger)
+        return PollService(poll_gateway, poll_storage, poll_option_service, llm, logger)
 
     @provide(scope=Scope.REQUEST)
     def poll_option_service(

@@ -9,6 +9,9 @@ class PollOptionService:
         self.poll_option_gateway = poll_option_gateway
         self.logger = logger
 
+    async def get_poll_option(self, poll_id: str, option_index: int) -> PollOptionResponseDTO:
+        return await self.poll_option_gateway.get_poll_option(poll_id, option_index)
+
     async def registration(self, poll_option_data: PollOptionCreateDTO) -> PollOptionResponseDTO:
         poll_option = await self.poll_option_gateway.create_poll_option(poll_option_data)
         self.logger.info(f"Вариант ответа зарегистрирован в БД, {poll_option.model_dump()}")

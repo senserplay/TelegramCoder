@@ -1,6 +1,9 @@
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.application.errors.poll_option import PollOptionAlreadyExistException
+from src.application.errors.poll_option import (
+    PollOptionAlreadyExistException,
+    PollOptionNotFoundException,
+)
 from src.application.schemas.poll_option import PollOptionCreateDTO, PollOptionResponseDTO
 from src.infrastructure.postgres.models.poll import Poll
 from src.infrastructure.postgres.models.poll_option import PollOption
@@ -9,6 +12,17 @@ from src.infrastructure.postgres.models.poll_option import PollOption
 class PollOptionDBGateWay:
     def __init__(self, session: AsyncSession):
         self.session = session
+
+    async def get_poll_option(self, poll_id: str, option_index: int) -> PollOptionResponseDTO:
+        result = await self.session.execute(
+            select(PollOption).where(
+                PollOption.poll_id == poll_id, PollOption.option_index == option_index
+            )
+        )
+        poll_option: PollOption = result.scalars().first()
+        if poll_option is None:
+            raise PollOptionNotFoundException()
+        return PollOptionResponseDTO.model_validate(poll_option.as_dict())
 
     async def create_poll_option(
         self, poll_option_data: PollOptionCreateDTO

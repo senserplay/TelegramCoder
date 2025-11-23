@@ -21,7 +21,6 @@ class ProxyAPI:
     def send_message(self, message: str) -> Optional[List[str]]:
         try:
             payload = {"model": self.model, "input": message}
-
             self.logger.debug(
                 f"Отправка запроса к ProxyAPI: {json.dumps(payload, ensure_ascii=False)[:100]}..."
             )
