@@ -7,7 +7,7 @@ from dishka.integrations.aiogram import (
     setup_dishka,
 )
 from src.core.config import Settings
-from src.core.logging_setup import setup_logging
+from src.core.log import setup_logging
 from src.core.modules.cache import CacheProvider
 from src.core.modules.chat import ChatProvider
 from src.core.modules.code import CodeProvider
@@ -26,6 +26,7 @@ logger = setup_logging()
 config = Settings()
 bot = Bot(config.BOT_TOKEN)
 dp = Dispatcher()
+poll_worker = setup_poll_worker(config, logger, bot, check_interval=10)
 container = make_async_container(
     DBProvider(DATABASE_URL),
     CacheProvider(),
@@ -33,14 +34,13 @@ container = make_async_container(
     ChatProvider(),
     ConfigProvider(),
     LLMProvider(),
-    PollProvider(),
+    PollProvider(poll_worker),
     CodeProvider(),
     AiogramProvider(),
 )
 
 setup_dishka(container, dp, auto_inject=True)
 setup_dp(dp)
-poll_worker = setup_poll_worker(config, logger, bot, check_interval=10)
 
 
 async def main():

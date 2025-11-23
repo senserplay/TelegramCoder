@@ -1,7 +1,7 @@
 import logging
 
 from dishka import Provider, Scope, provide
-from src.core.logging_setup import setup_logging
+from src.core.log import setup_logging
 
 
 class LoggerProvider(Provider):

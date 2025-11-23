@@ -4,6 +4,7 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 from dishka import FromDishka
+from src.filters.admin import AdminFilter
 from src.services.code_line import CodeLineService
 from src.services.poll import PollService
 
@@ -11,7 +12,7 @@ from src.services.poll import PollService
 router = Router()
 
 
-@router.message(Command("start"))
+@router.message(Command("start"), AdminFilter())
 async def cmd_start(
     message: Message,
     logger: FromDishka[Logger],

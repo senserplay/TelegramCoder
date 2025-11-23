@@ -35,9 +35,12 @@ class PollWorker:
         self.logger = logger
         self.check_interval = check_interval
         self._task = None
+        self._running = False
+        self._last_check_time = None
 
     async def start(self):
         self._task = asyncio.create_task(self._worker_loop())
+        self._running = True
         self.logger.info("🔄 Poll worker запущен")
 
     async def stop(self):
@@ -45,6 +48,7 @@ class PollWorker:
             self._task.cancel()
             try:
                 await self._task
+                self._running = False
                 self.logger.info("⏹️ Poll worker остановлен")
             except asyncio.CancelledError:
                 pass
@@ -54,6 +58,7 @@ class PollWorker:
         while True:
             try:
                 await self._process_expired_polls()
+                self._last_check_time = time.time()
             except Exception as e:
                 self.logger.error(f"🚨 Критическая ошибка в poll worker: {str(e)}")
             await asyncio.sleep(self.check_interval)
@@ -115,6 +120,18 @@ class PollWorker:
                 self.logger.error(
                     f"❌ Ошибка очистки данных для чата {chat_id}: {str(cleanup_error)}"
                 )
+
+    async def get_status(self) -> dict:
+        now = time.time()
+        if not self._running:
+            return {"status": "stopped", "last_check_ago": None}
+        if self._last_check_time is None:
+            return {"status": "running", "last_check_ago": None}
+        return {
+            "status": "running",
+            "last_check_ago": int(now - self._last_check_time),
+            "check_interval": self.check_interval,
+        }
 
 
 def setup_poll_worker(

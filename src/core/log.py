@@ -1,5 +1,8 @@
 import logging
+from collections import deque
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
+from typing import List
 
 from src.utils.path_resolve import find_project_root_by_src
 
@@ -35,6 +38,32 @@ def setup_logging() -> logging.Logger:
     logger.addHandler(file_handler)
 
     return logger
+
+
+def get_log_file_path() -> Path:
+    root_dir = find_project_root_by_src()
+    return root_dir / "logs" / LOG_FILE
+
+
+def read_last_n_lines(filepath: Path, n: int = 100) -> List[str]:
+    if not filepath.exists():
+        return [f"⚠️ Лог-файл не найден: {filepath}"]
+
+    try:
+        with open(filepath, "r", encoding="utf-8", errors="replace") as f:
+            return list(deque(f, maxlen=n))
+    except Exception as e:
+        return [f"❌ Ошибка чтения лога: {e}"]
+
+
+def read_full_log(filepath: Path) -> str:
+    if not filepath.exists():
+        return f"⚠️ Лог-файл не найден: {filepath}"
+    try:
+        with open(filepath, "r", encoding="utf-8", errors="replace") as f:
+            return f.read()
+    except Exception as e:
+        return f"❌ Ошибка чтения лога: {e}"
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from logging import Logger
-from typing import Dict, Optional, Set
+from typing import Dict, List, Optional, Set
 
 from redis.asyncio import Redis
 
@@ -94,3 +94,10 @@ class PollStorage:
                     continue
 
         return expired_chats
+
+    async def get_all_active_polls(self) -> List[str]:
+        keys = await self.redis_client.keys("active_poll:*")
+        if not keys:
+            return []
+        poll_ids = await self.redis_client.mget(keys)
+        return [pid for pid in poll_ids if pid is not None and pid != ""]
