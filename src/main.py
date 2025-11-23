@@ -25,7 +25,7 @@ from src.worker.poll import setup_poll_worker
 config = Settings()
 bot = Bot(config.BOT_TOKEN)
 dp = Dispatcher()
-poll_worker = setup_poll_worker(config, logger, bot, check_interval=10)
+poll_worker = setup_poll_worker(config, logger, bot)
 container = make_async_container(
     DBProvider(DATABASE_URL),
     CacheProvider(),

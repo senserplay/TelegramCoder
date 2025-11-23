@@ -4,7 +4,7 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message, PollAnswer
 from dishka import FromDishka
-from src.filters.admin import AdminFilter
+from src.filters.admin_or_private import AdminOrPrivateFilter
 from src.infrastructure.redis.storages.poll import PollStorage
 from src.services.poll import PollService
 
@@ -22,7 +22,7 @@ async def handle_poll_answer(
     )
 
 
-@router.message(Command("sendnow"), AdminFilter())
+@router.message(Command("sendnow"), AdminOrPrivateFilter())
 async def cmd_start(
     message: Message,
     logger: FromDishka[Logger],

@@ -2,7 +2,7 @@ from sqlalchemy import inspect
 from sqlalchemy.engine.url import URL
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base
-from src.core.config import env_settings
+from src.core.config import config
 
 
 class BaseWithAsDict:
@@ -21,11 +21,11 @@ SQLALCHEMY_CONNECT_ARGS = {
 
 DATABASE_URL = URL.create(
     "postgresql+asyncpg",
-    username=env_settings.PG_USERNAME,
-    password=env_settings.PG_PASSWORD,
-    database=env_settings.PG_DATABASE,
-    host=env_settings.PG_HOST,
-    port=env_settings.PG_PORT,
+    username=config.PG_USERNAME,
+    password=config.PG_PASSWORD,
+    database=config.PG_DATABASE,
+    host=config.PG_HOST,
+    port=config.PG_PORT,
 )
 
 engine = create_async_engine(

@@ -30,7 +30,8 @@ class Settings:
         self.LLM_MODEL = os.getenv("LLM_MODEL")
 
         # Poll Settings
-        self.POLL_TTL = os.getenv("POLL_TTL")
+        self.POLL_TTL = int(os.getenv("POLL_TTL"))
+        self.WORKER_CHECK_INTERVAL = int(os.getenv("WORKER_CHECK_INTERVAL"))
 
 
-env_settings = Settings()
+config = Settings()

@@ -3,7 +3,7 @@ from typing import Dict, List, Optional
 
 from aiogram import Bot
 from aiogram.types import Message, PollOption
-from src.application.schemas.code_line import CodeLineCreateDTO
+from src.application.schemas.code_line import CodeLineCreateDTO, CodeLineResponseDTO
 from src.application.schemas.poll import PollCreateDTO, PollResponseDTO
 from src.application.schemas.poll_option import PollOptionCreateDTO
 from src.external.llm import prompt
@@ -50,17 +50,19 @@ class PollService:
             options.append(option_index)
 
         await self.poll_storage.set_active_poll(poll.chat_id, poll.telegram_poll_id)
-        await self.poll_storage.set_next_poll_time(poll.chat_id, 10)
+        await self.poll_storage.set_next_poll_time(poll.chat_id)
         return poll
 
     async def generate_poll_options(
-        self, chat_id: int, last_code_lines: Optional[List[str]] = None
+        self, chat_id: int, last_code_lines: Optional[List[CodeLineResponseDTO]] = None
     ):
         if last_code_lines is None:
             last_code_lines = []
 
         poll_options = self.llm.send_message(
-            prompt.BASIC_PROMPT.format(last_code_lines=last_code_lines)
+            prompt.BASIC_PROMPT.format(
+                last_code_lines=[code_line.content for code_line in last_code_lines]
+            )
         )
         self.logger.info(f"Poll options: {poll_options}")
 
@@ -75,7 +77,7 @@ class PollService:
         return poll_options
 
     async def create_poll_for_chat(
-        self, chat_id: int, bot: Bot, last_code_lines: Optional[List[str]] = None
+        self, chat_id: int, bot: Bot, last_code_lines: Optional[List[CodeLineResponseDTO]] = None
     ) -> str:
         poll_options = None
         while poll_options is None:

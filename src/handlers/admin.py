@@ -9,7 +9,7 @@ from aiogram.filters import Command
 from aiogram.types import FSInputFile, Message
 from dishka import FromDishka
 from src.core.log import get_log_file_path, read_full_log, read_last_n_lines
-from src.filters.admin import AdminFilter
+from src.filters.admin_or_private import AdminOrPrivateFilter
 from src.infrastructure.redis.storages.poll import PollStorage
 from src.worker.poll import PollWorker
 
@@ -19,7 +19,7 @@ START_TIME = time.time()
 router = Router()
 
 
-@router.message(Command("health"), AdminFilter())
+@router.message(Command("health"), AdminOrPrivateFilter())
 async def cmd_health(
     message: Message,
     poll_storage: FromDishka[PollStorage],
@@ -58,7 +58,7 @@ async def cmd_health(
     await message.answer(response, parse_mode="HTML")
 
 
-@router.message(Command("logs"), AdminFilter())
+@router.message(Command("logs"), AdminOrPrivateFilter())
 async def cmd_logs(message: Message, logger: FromDishka[Logger]):
     logger.info(f"Админ {message.from_user.id} запросил последние логи")
     log_path = get_log_file_path()
@@ -83,7 +83,7 @@ async def cmd_logs(message: Message, logger: FromDishka[Logger]):
                 break
 
 
-@router.message(Command("alllogs"), AdminFilter())
+@router.message(Command("alllogs"), AdminOrPrivateFilter())
 async def cmd_alllogs(message: Message, logger: FromDishka[Logger]):
     logger.info(f"Админ {message.from_user.id} запросил полный лог")
 

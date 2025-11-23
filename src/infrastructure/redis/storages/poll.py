@@ -3,12 +3,14 @@ from logging import Logger
 from typing import Dict, List, Optional, Set
 
 from redis.asyncio import Redis
+from src.core.config import Settings
 
 
 class PollStorage:
-    def __init__(self, redis_client: Redis, logger: Logger):
+    def __init__(self, redis_client: Redis, logger: Logger, config: Settings):
         self.redis_client = redis_client
         self.logger = logger
+        self.config = config
 
     async def set_active_poll(self, chat_id: int, poll_id: str) -> bool:
         key = f"active_poll:{chat_id}"
@@ -51,9 +53,9 @@ class PollStorage:
         key = f"poll_user_votes:{poll_id}"
         return bool(await self.redis_client.delete(key))
 
-    async def set_next_poll_time(self, chat_id: int, delay_seconds: int = 60) -> datetime:
+    async def set_next_poll_time(self, chat_id: int) -> datetime:
         current_time = datetime.now(timezone.utc)
-        next_time = current_time + timedelta(seconds=delay_seconds)
+        next_time = current_time + timedelta(seconds=self.config.POLL_TTL)
         timestamp = next_time.timestamp()
 
         key = f"next_poll_at:{chat_id}"

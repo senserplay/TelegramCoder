@@ -4,10 +4,7 @@ from aiogram.types import Message
 
 class AdminFilter(BaseFilter):
     async def __call__(self, message: Message) -> bool:
-        if message.chat.type == "private":
-            return True
-
-        elif message.chat.type in ["group", "supergroup"]:
+        if message.chat.type in ["group", "supergroup"]:
             try:
                 administrators = await message.bot.get_chat_administrators(message.chat.id)
                 admin_user_ids = [admin.user.id for admin in administrators]
@@ -15,4 +12,4 @@ class AdminFilter(BaseFilter):
             except Exception:
                 return True
 
-        return True
+        return False

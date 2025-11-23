@@ -1,13 +1,13 @@
 from redis.asyncio import Redis
-from src.core.config import env_settings
+from src.core.config import config
 
 
 async_redis_client = Redis(
-    host=env_settings.REDIS_HOST,
-    port=env_settings.REDIS_PORT,
-    username=env_settings.REDIS_USERNAME,
-    db=int(env_settings.REDIS_DB_INDEX),
-    password=env_settings.REDIS_PASSWORD,
+    host=config.REDIS_HOST,
+    port=config.REDIS_PORT,
+    username=config.REDIS_USERNAME,
+    db=int(config.REDIS_DB_INDEX),
+    password=config.REDIS_PASSWORD,
     decode_responses=True,
     socket_timeout=5.0,
     socket_connect_timeout=5.0,

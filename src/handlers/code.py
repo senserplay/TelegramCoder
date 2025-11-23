@@ -8,7 +8,7 @@ from aiogram.filters import Command
 from aiogram.types import BufferedInputFile, Message
 from dishka import FromDishka
 from src.application.schemas.code_line import CodeLineResponseDTO
-from src.filters.admin import AdminFilter
+from src.filters.admin_or_private import AdminOrPrivateFilter
 from src.services.code_line import CodeLineService
 from src.services.poll import PollService
 
@@ -36,7 +36,7 @@ async def cmd_code(
         )
 
 
-@router.message(Command("code_completed"), AdminFilter())
+@router.message(Command("code_completed"), AdminOrPrivateFilter())
 async def cmd_code_completed(
     message: Message,
     logger: FromDishka[Logger],

@@ -8,7 +8,9 @@ class ChatService:
         self.chat_gateway = chat_gateway
 
     async def registration(self, chat: Chat) -> ChatResponseDTO:
-        chat_data = ChatCreateDTO(telegram_chat_id=chat.id, title=chat.title)
+        chat_data = ChatCreateDTO(
+            telegram_chat_id=chat.id, title=chat.title if chat.title else chat.username
+        )
         return await self.chat_gateway.get_or_create_chat(chat_data)
 
     async def delete_chat(self, telegram_chat_id) -> bool:

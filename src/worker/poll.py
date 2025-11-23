@@ -26,14 +26,14 @@ class PollWorker:
         llm: ProxyAPI,
         bot: Bot,
         logger: Logger,
-        check_interval: int = 30,
+        config: Settings,
     ):
         self.poll_storage = poll_storage
         self.session_maker = session_maker
         self.llm = llm
         self.bot = bot
         self.logger = logger
-        self.check_interval = check_interval
+        self.config = config
         self._task = None
         self._running = False
         self._last_check_time = None
@@ -54,14 +54,16 @@ class PollWorker:
                 pass
 
     async def _worker_loop(self):
-        self.logger.info(f"⚡ Poll worker запущен с интервалом {self.check_interval} секунд")
+        self.logger.info(
+            f"⚡ Poll worker запущен с интервалом {self.config.WORKER_CHECK_INTERVAL} секунд"
+        )
         while True:
             try:
                 await self._process_expired_polls()
                 self._last_check_time = time.time()
             except Exception as e:
                 self.logger.error(f"🚨 Критическая ошибка в poll worker: {str(e)}")
-            await asyncio.sleep(self.check_interval)
+            await asyncio.sleep(self.config.WORKER_CHECK_INTERVAL)
 
     async def _process_expired_polls(self):
         current_timestamp = int(time.time())
@@ -130,15 +132,13 @@ class PollWorker:
         return {
             "status": "running",
             "last_check_ago": int(now - self._last_check_time),
-            "check_interval": self.check_interval,
+            "check_interval": self.config.WORKER_CHECK_INTERVAL,
         }
 
 
-def setup_poll_worker(
-    config: Settings, logger: Logger, bot: Bot, check_interval: int = 30
-) -> PollWorker:
+def setup_poll_worker(config: Settings, logger: Logger, bot: Bot) -> PollWorker:
     session_maker = async_sessionmaker(bind=engine, expire_on_commit=False)
-    poll_storage = PollStorage(async_redis_client, logger)
+    poll_storage = PollStorage(async_redis_client, logger, config)
     llm = ProxyAPI(config, logger)
     poll_worker = PollWorker(
         poll_storage=poll_storage,
@@ -146,6 +146,6 @@ def setup_poll_worker(
         llm=llm,
         bot=bot,
         logger=logger,
-        check_interval=check_interval,
+        config=config,
     )
     return poll_worker

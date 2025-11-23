@@ -2,14 +2,14 @@ from logging.config import fileConfig
 from sqlalchemy import create_engine
 from alembic import context
 
-from src.core.config import env_settings
+from src.core.config import config
 from src.infrastructure.postgres.connection import Base
 
 from src.infrastructure.postgres.models import *
 
 DATABASE_URL = (
-    f"postgresql://{env_settings.PG_USERNAME}:{env_settings.PG_PASSWORD}"
-    f"@{env_settings.PG_HOST}:{env_settings.PG_PORT}/{env_settings.PG_DATABASE}"
+    f"postgresql://{config.PG_USERNAME}:{config.PG_PASSWORD}"
+    f"@{config.PG_HOST}:{config.PG_PORT}/{config.PG_DATABASE}"
 )
 config = context.config
 
