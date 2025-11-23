@@ -1,5 +1,5 @@
 from logging import Logger
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from aiogram import Bot
 from aiogram.types import Message, PollOption
@@ -53,47 +53,52 @@ class PollService:
         await self.poll_storage.set_next_poll_time(poll.chat_id, 10)
         return poll
 
-    async def create_poll_for_chat(
-        self, chat_id: int, bot: Bot, last_code_lines: list = None
-    ) -> str:
+    async def generate_poll_options(
+        self, chat_id: int, last_code_lines: Optional[List[str]] = None
+    ):
         if last_code_lines is None:
             last_code_lines = []
 
-        try:
-            themes = self.llm.send_message(
-                prompt.BASIC_PROMPT.format(last_code_lines=last_code_lines)
-            )
+        poll_options = self.llm.send_message(
+            prompt.BASIC_PROMPT.format(last_code_lines=last_code_lines)
+        )
+        self.logger.info(f"Poll options: {poll_options}")
 
-            if not isinstance(themes, list) or len(themes) < 2:
-                self.logger.error(f"Некорректный ответ от LLM для чата {chat_id}: {themes}")
-                themes = [
-                    "print('hello')",
-                    "def main():",
-                    "if __name__ == '__main__':",
-                    "# TODO: implement",
-                ]
+        if (
+            not isinstance(poll_options, list)
+            or len(poll_options) < 4
+            or any(line == "" for line in poll_options)
+        ):
+            self.logger.error(f"Некорректный ответ от LLM для чата {chat_id}: {poll_options}")
+            raise ValueError("Некорректный ответ от LLM для чата {chat_id}: {code_lines}")
 
-            question = "Выберите следующую строку программы:"
-            poll_message = await bot.send_poll(
-                chat_id=chat_id,
-                question=question,
-                options=themes[:10],
-                is_anonymous=False,
-                type="regular",
-                allows_multiple_answers=False,
-            )
+        return poll_options
 
-            self.logger.info(f"Опрос создан для чата {chat_id}, poll_id={poll_message.poll.id}")
+    async def create_poll_for_chat(
+        self, chat_id: int, bot: Bot, last_code_lines: Optional[List[str]] = None
+    ) -> str:
+        poll_options = None
+        while poll_options is None:
+            try:
+                poll_options = await self.generate_poll_options(chat_id, last_code_lines)
+            except ValueError:
+                continue
 
-            await self.registration(
-                chat_id, poll_message.poll.id, question, poll_message.poll.options
-            )
+        question = "Выберите следующую строку программы:"
+        poll_message = await bot.send_poll(
+            chat_id=chat_id,
+            question=question,
+            options=poll_options[:4],
+            is_anonymous=False,
+            type="regular",
+            allows_multiple_answers=False,
+        )
 
-            return poll_message.poll.id
+        self.logger.info(f"Опрос создан для чата {chat_id}, poll_id={poll_message.poll.id}")
 
-        except Exception as e:
-            self.logger.error(f"Ошибка создания опроса для чата {chat_id}: {e}")
-            raise
+        await self.registration(chat_id, poll_message.poll.id, question, poll_message.poll.options)
+
+        return poll_message.poll.id
 
     async def process_chat_poll(self, chat_id: int, bot: Bot):
         poll_id = await self.poll_storage.get_active_poll(chat_id)
@@ -124,7 +129,7 @@ class PollService:
             content=poll_option.option_text,
         )
         await self.code_line_service.add_line(code_line_data)
-        await self._cleanup_chat_data(chat_id, poll_id)
+        await self.cleanup_chat_data(chat_id)
 
         new_poll_id = await self.create_poll_for_chat(
             chat_id=chat_id, bot=bot, last_code_lines=last_code_lines
@@ -137,14 +142,8 @@ class PollService:
         await self.poll_gateway.delete_chat_polls(message.chat.id)
         await self.poll_storage.clear_chat_data(message.chat.id)
 
-    async def _get_vote_winner(self, votes: Dict[int, int]) -> int:
-        if not votes:
-            return 0
-
-        winning_option = max(votes.items(), key=lambda x: x[1])[0]
-        return winning_option
-
-    async def _cleanup_chat_data(self, chat_id: int, poll_id: str):
+    async def cleanup_chat_data(self, chat_id: int):
+        poll_id = await self.poll_storage.get_active_poll(chat_id)
         self.logger.debug(f"🧹 Начало очистки данных для чата {chat_id}, опрос {poll_id}")
         try:
             await self.poll_storage.clear_poll_votes(poll_id)
@@ -160,3 +159,10 @@ class PollService:
 
         except Exception as e:
             self.logger.error(f"❌ Ошибка очистки данных для чата {chat_id}: {str(e)}")
+
+    async def _get_vote_winner(self, votes: Dict[int, int]) -> int:
+        if not votes:
+            return 0
+
+        winning_option = max(votes.items(), key=lambda x: x[1])[0]
+        return winning_option

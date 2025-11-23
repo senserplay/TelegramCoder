@@ -7,7 +7,7 @@ from dishka.integrations.aiogram import (
     setup_dishka,
 )
 from src.core.config import Settings
-from src.core.log import setup_logging
+from src.core.log import logger
 from src.core.modules.cache import CacheProvider
 from src.core.modules.chat import ChatProvider
 from src.core.modules.code import CodeProvider
@@ -22,7 +22,6 @@ from src.infrastructure.redis.connection import async_redis_client
 from src.worker.poll import setup_poll_worker
 
 
-logger = setup_logging()
 config = Settings()
 bot = Bot(config.BOT_TOKEN)
 dp = Dispatcher()

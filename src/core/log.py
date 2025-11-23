@@ -40,6 +40,9 @@ def setup_logging() -> logging.Logger:
     return logger
 
 
+logger = setup_logging()
+
+
 def get_log_file_path() -> Path:
     root_dir = find_project_root_by_src()
     return root_dir / "logs" / LOG_FILE
@@ -64,8 +67,3 @@ def read_full_log(filepath: Path) -> str:
             return f.read()
     except Exception as e:
         return f"❌ Ошибка чтения лога: {e}"
-
-
-if __name__ == "__main__":
-    logger = setup_logging()
-    logger.info("Logger is working!")

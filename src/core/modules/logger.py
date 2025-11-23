@@ -1,10 +1,10 @@
 import logging
 
 from dishka import Provider, Scope, provide
-from src.core.log import setup_logging
+from src.core.log import logger
 
 
 class LoggerProvider(Provider):
-    @provide(scope=Scope.REQUEST)
-    async def logger(self) -> logging.Logger:
-        return setup_logging()
+    @provide(scope=Scope.APP)
+    async def get_logger(self) -> logging.Logger:
+        return logger
